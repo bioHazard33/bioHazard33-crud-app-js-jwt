@@ -1,9 +1,1 @@
-[
-  {
-    "courseId": 0,
-    "name": "my test course",
-    "description": "this is my test course i study",
-    "availableSlots": 25,
-    "enrolledStudents": []
-  }
-]
+[]
