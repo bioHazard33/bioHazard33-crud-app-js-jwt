@@ -3,6 +3,7 @@ const fs = require("fs");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const auth = require("../auth/auth");
+const emailValidator=require('email-validator')
 
 const studentJSONPath = "json/students.json";
 
@@ -25,7 +26,7 @@ router.get("/", (req, res) => {
 router.get("/:id", auth, (req, res) => {
     try {
         let data = JSON.parse(fs.readFileSync(studentJSONPath));
-        data = data.filter((ele) => ele["studentId"] == req.params.id);
+        data = data.filter((ele) => ele["studentId"] === parseInt(req.params.id));
         if (!data) throw `No student with ID:${req.params.id}`;
         res.send({ data, error: null });
     } catch (error) {
@@ -36,28 +37,28 @@ router.get("/:id", auth, (req, res) => {
 // Login
 router.post("/login", (req, res) => {
     try {
-        let email = req.body.email,
-            password = req.body.password;
+        let email = req.body.email.trim(),
+            password = req.body.password.trim();
 
-        if (!email || !password) throw `Invalid Form Data`;
+        if ((!email || !password ) || !emailValidator.validate(email) || password.length<=5) throw `Invalid Form Data`;
 
         const students = JSON.parse(fs.readFileSync(studentJSONPath));
 
         let student = students.findIndex(
-            (student) => student.email == email && student.password == password
+            (student) => student.email === email && student.password === password
         );
-        if (student == -1) throw `Invalid Email or Password`;
+        if (student === -1) throw `Invalid Email or Password`;
 
         const token = jwt.sign(
             { studentId: students[student]["studentId"] },
             "my-secret-key",
             { expiresIn: "1h" }
         );
+
         students[student].accessToken = token;
         fs.writeFileSync(studentJSONPath, JSON.stringify(students, null, 2));
         res.status(200).send({ data: { token }, error: null });
     } catch (error) {
-        console.log(error);
         res.status(401).send({ data: null, error });
     }
 });
@@ -65,11 +66,11 @@ router.post("/login", (req, res) => {
 // Signup
 router.post("/signup", (req, res) => {
     try {
-        let userName = req.body.userName,
-            email = req.body.email,
-            password = req.body.password;
+        let userName = req.body.userName.trim(),
+            email = req.body.email.trim(),
+            password = req.body.password.trim();
 
-        if (!userName || !email || !password) throw `Invalid Form Data`;
+        if ((!userName || !email || !password ) || !emailValidator.validate(email) || password.length<=5) throw `Invalid Form Data`;
 
         let users = JSON.parse(fs.readFileSync(studentJSONPath));
         users.map((element) => {
@@ -92,7 +93,6 @@ router.post("/signup", (req, res) => {
         fs.writeFileSync(studentJSONPath, JSON.stringify(users, null, 2));
         res.status(201).send({ data: { accessToken }, error: null });
     } catch (error) {
-        console.log(error);
         res.status(400).send({ data: null, error });
     }
 });

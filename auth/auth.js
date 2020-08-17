@@ -9,7 +9,7 @@ const auth = (req, res, next) => {
         const students = JSON.parse(fs.readFileSync(studentJSONPath));
         req.studentId = payload.studentId;
         let student = students.find(
-            (ele) => ele["studentId"] == payload.studentId
+            (ele) => ele["studentId"] === parseInt(payload.studentId)
         );
         if (!student) throw `Please Authenticate`;
         next();

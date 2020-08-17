@@ -20,7 +20,7 @@ router.get("/", (req, res) => {
 router.get("/:id", (req, res) => {
     try {
         let data = JSON.parse(fs.readFileSync(courseJSONPath));
-        data = data.filter((ele) => ele["courseId"] == req.params.id);
+        data = data.filter((ele) => ele["courseId"] === parseInt(req.params.id));
         if (!data) throw `No course with ID:${req.params.id}`;
         res.send({ data, error: null });
     } catch (error) {
@@ -31,11 +31,11 @@ router.get("/:id", (req, res) => {
 // Add course
 router.post("/", (req, res) => {
     try {
-        let name = req.body.name,
-            description = req.body.description,
-            availableSlots = req.body.availableSlots;
-        if (!name || !description || !availableSlots) throw "Invalid Input";
+        let name = req.body.name.trim(),
+            description = req.body.description.trim(),
+            availableSlots = parseInt(req.body.availableSlots);
 
+        if (!name || !description || !availableSlots || availableSlots<=0) throw "Invalid Form Data";
         let data = JSON.parse(fs.readFileSync(courseJSONPath));
         let obj = {
             courseId: data.length,
@@ -56,24 +56,24 @@ router.post("/", (req, res) => {
 //Enroll in course
 router.post("/:id/enroll", auth, (req, res) => {
     try {
-        let courseId = req.params.id,
-            studentId = req.studentId;
+        let courseId = parseInt(req.params.id),
+            studentId = parseInt(req.body.studentId);
 
         let course_data = JSON.parse(fs.readFileSync(courseJSONPath));
         let student_data = JSON.parse(fs.readFileSync(studentJSONPath));
 
         let curr_student = student_data.findIndex(
-            (ele) => ele["studentId"] == studentId
+            (ele) => ele["studentId"] === studentId
         );
         if (curr_student == -1)
             throw `No student exists with ID : ${studentId}`;
 
         let course_index = course_data.findIndex(
-            (ele) => ele["courseId"] == courseId
+            (ele) => ele["courseId"] === courseId
         );
         if (course_index == -1) throw `No course exists with ID : ${courseId}`;
 
-        if (course_data[course_index]["availableSlots"] == 0)
+        if (course_data[course_index]["availableSlots"] === 0)
             throw `No availabe slots for course ID : ${courseId}`;
 
         course_data[course_index]["availableSlots"] -= 1;
@@ -89,36 +89,37 @@ router.post("/:id/enroll", auth, (req, res) => {
 //Deregister from a Course
 router.put("/:id/deregister", auth, (req, res) => {
     try {
-        let courseId = req.params.id
-            studentId = req.studentId;
+        let courseId = parseInt(req.params.id)
+            studentId = parseInt(req.body.studentId);
 
         let course_data = JSON.parse(fs.readFileSync(courseJSONPath));
         let student_data = JSON.parse(fs.readFileSync(studentJSONPath));
 
         let curr_student = student_data.filter(
-            (ele) => ele["studentId"] == studentId
+            (ele) => ele["studentId"] === studentId
         );
         if (!curr_student) throw `No student exists with ID : ${studentId}`;
 
         let course_index = course_data.findIndex(
-            (ele) => ele["courseId"] == courseId
+            (ele) => ele["courseId"] === courseId
         );
         if (course_index == -1) throw `No course exists with ID : ${courseId}`;
 
         course_data[course_index]["availableSlots"] += 1;
-        let enrolledStudents = course_data[course_index]["enrolledStudents"];
 
+        let enrolledStudents = course_data[course_index]["enrolledStudents"];
         let student_index = enrolledStudents.indexOf(studentId);
 
         if (student_index == -1)
             throw `Student with ID : ${studentId} not registered in this course with ID : ${courseId}`;
 
         course_data[course_index]["enrolledStudents"].splice(student_index, 1);
+
         fs.writeFileSync(courseJSONPath, JSON.stringify(course_data, null, 2));
         res.send({ data: "Success", error: null });
+    
     } catch (error) {
-        console.log(error);
-        res.status(500).send({ data: null, error });
+        res.status(401).send({ data: null, error });
     }
 });
 
